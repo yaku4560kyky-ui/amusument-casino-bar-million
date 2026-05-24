@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import { AnimatePresence, motion } from 'framer-motion'
 import { AtSign, Bell, Calendar, Clock, Trash2, Trophy, UserCheck } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -125,71 +126,87 @@ export default function NotificationsClient({ initialNotifications }: Notificati
       </section>
 
       <div className="space-y-3">
-        {notifications.length > 0 ? (
-          notifications.map(notification => {
-            const Icon = TYPE_ICONS[notification.type] ?? Bell
-            const content = (
-              <div
-                className={cn(
-                  'rounded-lg border bg-card p-4 transition hover:bg-muted/30',
-                  notification.is_read
-                    ? 'border-border'
-                    : 'border-l-4 border-l-amber-400 border-y-border border-r-border'
-                )}
-                onClick={() => markRead(notification.id)}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="rounded-lg bg-amber-400/10 p-2 text-amber-300">
-                    <Icon className="size-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="font-semibold text-slate-100">{notification.title}</h2>
-                      {!notification.is_read && (
-                        <Badge className="bg-amber-400 text-slate-950">未読</Badge>
-                      )}
+        <AnimatePresence>
+          {notifications.length > 0 ? (
+            notifications.map(notification => {
+              const Icon = TYPE_ICONS[notification.type] ?? Bell
+              const content = (
+                <div
+                  className={cn(
+                    'rounded-lg border bg-card p-4 transition hover:bg-muted/30',
+                    notification.is_read
+                      ? 'border-border'
+                      : 'border-l-4 border-l-amber-400 border-y-border border-r-border'
+                  )}
+                  onClick={() => markRead(notification.id)}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-amber-400/10 p-2 text-amber-300">
+                      <Icon className="size-4" />
                     </div>
-                    {notification.body && (
-                      <p className="mt-1 text-sm leading-6 text-slate-400">{notification.body}</p>
-                    )}
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(notification.created_at), {
-                        addSuffix: true,
-                        locale: ja,
-                      })}
-                    </p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="font-semibold text-slate-100">{notification.title}</h2>
+                        {!notification.is_read && (
+                          <Badge className="bg-amber-400 text-slate-950">未読</Badge>
+                        )}
+                      </div>
+                      {notification.body && (
+                        <p className="mt-1 text-sm leading-6 text-slate-400">{notification.body}</p>
+                      )}
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(notification.created_at), {
+                          addSuffix: true,
+                          locale: ja,
+                        })}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                      aria-label="通知を削除"
+                      onClick={event => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        deleteNotification(notification.id)
+                      }}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                    aria-label="通知を削除"
-                    onClick={event => {
-                      event.preventDefault()
-                      event.stopPropagation()
-                      deleteNotification(notification.id)
-                    }}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
                 </div>
-              </div>
-            )
+              )
 
-            return notification.link_url ? (
-              <Link key={notification.id} href={notification.link_url}>
-                {content}
-              </Link>
-            ) : (
-              <div key={notification.id}>{content}</div>
-            )
-          })
-        ) : (
-          <div className="rounded-lg border border-dashed border-border p-10 text-center text-sm text-slate-400">
-            通知はありません
-          </div>
-        )}
+              return (
+                <motion.div
+                  key={notification.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  {notification.link_url ? (
+                    <Link href={notification.link_url}>
+                      {content}
+                    </Link>
+                  ) : (
+                    content
+                  )}
+                </motion.div>
+              )
+            })
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="rounded-lg border border-dashed border-border p-10 text-center text-sm text-slate-400"
+            >
+              通知はありません
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )

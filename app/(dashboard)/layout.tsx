@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import MobileNav from '@/components/layout/MobileNav'
 import Sidebar from '@/components/layout/Sidebar'
 import { createClient } from '@/lib/supabase/server'
 import type { Profile } from '@/types'
@@ -15,9 +16,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!profile) redirect('/login')
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground max-md:flex-col">
-      <Sidebar profile={profile as Profile} />
-      <main className="ml-64 flex-1 p-6 max-md:ml-0 max-md:p-4">{children}</main>
+    <div className="flex min-h-screen bg-background text-foreground">
+      <div className="hidden md:flex">
+        <Sidebar profile={profile as Profile} />
+      </div>
+      <main className="flex-1 md:ml-64 p-4 md:p-6">{children}</main>
+      <div className="md:hidden">
+        <MobileNav profile={profile as Profile} />
+      </div>
     </div>
   )
 }

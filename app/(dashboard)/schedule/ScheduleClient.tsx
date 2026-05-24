@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { CalendarDays, ClipboardList, Trophy } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -157,6 +158,24 @@ export default function ScheduleClient({
     })
 
     setEvents(current => current.filter(event => event.id !== id))
+  }
+
+  async function handleMoveEvent(id: string, newDate: string) {
+    const before = events
+    setEvents(current =>
+      sortEvents(current.map(e => e.id === id ? { ...e, event_date: newDate } : e))
+    )
+    try {
+      const response = await fetch(`/api/schedule/events/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event_date: newDate }),
+      })
+      if (!response.ok) throw new Error('failed')
+    } catch {
+      setEvents(sortEvents(before))
+      toast.error('移動に失敗しました')
+    }
   }
 
   async function handleCompleteTask(taskId: string) {
@@ -370,43 +389,54 @@ export default function ScheduleClient({
         })}
       </div>
 
-      {activeTab === 'calendar' && (
-        <CalendarTab
-          events={events}
-          onAddEvent={handleAddEvent}
-          onDeleteEvent={handleDeleteEvent}
-          isAdmin={isAdmin}
-        />
-      )}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, x: 8 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -8 }}
+          transition={{ duration: 0.18 }}
+        >
+          {activeTab === 'calendar' && (
+            <CalendarTab
+              events={events}
+              onAddEvent={handleAddEvent}
+              onDeleteEvent={handleDeleteEvent}
+              onMoveEvent={handleMoveEvent}
+              isAdmin={isAdmin}
+            />
+          )}
 
-      {activeTab === 'operations' && (
-        <OperationsTab
-          tasks={tasks as never}
-          completions={completions as never}
-          today={today}
-          staffProfiles={staffProfiles}
-          onCompleteTask={handleCompleteTask}
-          onUncompleteTask={handleUncompleteTask}
-          onAddTask={handleAddTask as never}
-          onDeleteTask={handleDeleteTask}
-          isAdmin={isAdmin}
-        />
-      )}
+          {activeTab === 'operations' && (
+            <OperationsTab
+              tasks={tasks as never}
+              completions={completions as never}
+              today={today}
+              staffProfiles={staffProfiles}
+              onCompleteTask={handleCompleteTask}
+              onUncompleteTask={handleUncompleteTask}
+              onAddTask={handleAddTask as never}
+              onDeleteTask={handleDeleteTask}
+              isAdmin={isAdmin}
+            />
+          )}
 
-      {activeTab === 'exceed' && (
-        <ExceedTab
-          tournaments={tournaments}
-          today={today}
-          staffProfiles={staffProfiles}
-          onCompleteTask={handleCompleteExceedTask}
-          onUncompleteTask={handleUncompleteExceedTask}
-          onAddTournament={handleAddTournament}
-          onUpdateParticipants={handleUpdateParticipants}
-          onUpdateStatus={handleUpdateStatus}
-          onGenerateTemplateTasks={handleGenerateTemplateTasks}
-          isAdmin={isAdmin}
-        />
-      )}
+          {activeTab === 'exceed' && (
+            <ExceedTab
+              tournaments={tournaments}
+              today={today}
+              staffProfiles={staffProfiles}
+              onCompleteTask={handleCompleteExceedTask}
+              onUncompleteTask={handleUncompleteExceedTask}
+              onAddTournament={handleAddTournament}
+              onUpdateParticipants={handleUpdateParticipants}
+              onUpdateStatus={handleUpdateStatus}
+              onGenerateTemplateTasks={handleGenerateTemplateTasks}
+              isAdmin={isAdmin}
+            />
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   )
 }

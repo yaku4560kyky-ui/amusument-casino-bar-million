@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 import {
   Bell,
   Calendar,
@@ -10,10 +11,12 @@ import {
   LogOut,
   Settings,
   Shield,
+  Users,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import NotificationBell from '@/components/notifications/NotificationBell'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import type { Profile } from '@/types'
@@ -26,13 +29,15 @@ const links = [
   { href: '/settings', label: '設定', icon: Settings },
 ]
 
+const adminLinks = [
+  { href: '/admin', label: '管理者ダッシュボード', icon: Shield },
+  { href: '/admin/users', label: 'スタッフ管理', icon: Users },
+]
+
 export default function Sidebar({ profile }: { profile: Profile }) {
   const pathname = usePathname()
   const router = useRouter()
-  const navLinks =
-    profile.role === 'admin'
-      ? [...links, { href: '/admin', label: '管理', icon: Shield }]
-      : links
+  const navLinks = profile.role === 'admin' ? [...links, ...adminLinks] : links
 
   async function handleLogout() {
     const supabase = createClient()
@@ -66,20 +71,31 @@ export default function Sidebar({ profile }: { profile: Profile }) {
               key={href}
               href={href}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                'relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-amber-400/10 text-amber-300'
+                  ? 'text-amber-300'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               )}
             >
-              <Icon size={18} />
-              {label}
+              {isActive && (
+                <motion.span
+                  layoutId="activeNav"
+                  className="absolute inset-0 rounded-lg bg-amber-400/10"
+                  transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
+                />
+              )}
+              <Icon size={18} className="relative z-10" />
+              <span className="relative z-10">{label}</span>
             </Link>
           )
         })}
       </nav>
 
-      <div className="border-t border-border p-3">
+      <div className="border-t border-border p-3 space-y-1">
+        <div className="flex items-center justify-between px-3 py-1">
+          <span className="text-xs text-muted-foreground">テーマ</span>
+          <ThemeToggle />
+        </div>
         <button
           onClick={handleLogout}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"

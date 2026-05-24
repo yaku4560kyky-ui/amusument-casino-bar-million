@@ -191,6 +191,36 @@
   }
 }
 
+.light {
+  color-scheme: light;
+  --background: hsl(0 0% 98%);
+  --foreground: hsl(240 10% 3.9%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(240 10% 3.9%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(240 10% 3.9%);
+  --primary: hsl(35 91% 48%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(240 4.8% 95.9%);
+  --secondary-foreground: hsl(240 5.9% 10%);
+  --muted: hsl(240 4.8% 95.9%);
+  --muted-foreground: hsl(240 3.8% 46.1%);
+  --accent: hsl(240 4.8% 95.9%);
+  --accent-foreground: hsl(240 5.9% 10%);
+  --destructive: hsl(0 84.2% 60.2%);
+  --border: hsl(240 5.9% 90%);
+  --input: hsl(240 5.9% 90%);
+  --ring: hsl(35 91% 48%);
+  --sidebar: hsl(240 4.8% 97%);
+  --sidebar-foreground: hsl(240 5.9% 10%);
+  --sidebar-primary: hsl(35 91% 48%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(35 60% 92%);
+  --sidebar-accent-foreground: hsl(35 60% 25%);
+  --sidebar-border: hsl(240 5.9% 90%);
+  --sidebar-ring: hsl(35 91% 48%);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -202,6 +232,9 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  .dark body, :root body {
     background:
       radial-gradient(circle at 18% 0%, oklch(0.24 0.05 260 / 55%), transparent 34rem),
       radial-gradient(circle at 82% 8%, oklch(0.34 0.08 80 / 18%), transparent 28rem),

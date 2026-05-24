@@ -1,170 +1,86 @@
-import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { Bell, CheckSquare, Trophy, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import AdminAutoRefresh from '@/components/admin/AdminAutoRefresh'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
-import { formatMinutes, formatWage } from '@/lib/calculations'
-import type { Profile, TimeRecord, Break } from '@/types'
-
-type StaffWithRecord = {
-  profile: Profile
-  record: TimeRecord | null
-  breaks: Break[]
-}
-
-const STATUS_BADGE: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  not_started: { label: '未出勤', variant: 'secondary' },
-  working:     { label: '勤務中', variant: 'default' },
-  on_break:    { label: '休憩中', variant: 'outline' },
-  finished:    { label: '退勤済み', variant: 'secondary' },
-}
 
 export default async function AdminPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
 
-  const { data: myProfile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
+  const [
+    { count: profilesCount },
+    { count: tasksCount },
+    { count: tournamentsCount },
+    { count: notificationsCount },
+  ] = await Promise.all([
+    supabase.from('profiles').select('*', { count: 'exact', head: true }),
+    supabase.from('operation_tasks').select('*', { count: 'exact', head: true }).eq('is_active', true),
+    supabase
+      .from('exceed_tournaments')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['planning', 'registration', 'active']),
+    supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('is_read', false),
+  ])
 
-  if (myProfile?.role !== 'admin') redirect('/clock')
-
-  const today = new Date().toISOString().split('T')[0]
-
-  // 全スタッフのプロフィール取得
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('*')
-    .order('name', { ascending: true })
-
-  // 今日の勤怠記録を全員分取得
-  const { data: todayRecords } = await supabase
-    .from('time_records')
-    .select('*')
-    .gte('clock_in', `${today}T00:00:00`)
-
-  // 今日の休憩記録を全員分取得
-  const recordIds = todayRecords?.map(r => r.id) ?? []
-  let allBreaks: Break[] = []
-  if (recordIds.length > 0) {
-    const { data: breaks } = await supabase
-      .from('breaks')
-      .select('*')
-      .in('time_record_id', recordIds)
-    allBreaks = (breaks ?? []) as Break[]
-  }
-
-  const staffList: StaffWithRecord[] = (profiles ?? []).map(profile => {
-    const record = (todayRecords ?? []).find(r => r.user_id === profile.id) ?? null
-    const breaks = allBreaks.filter(b => b.time_record_id === record?.id)
-    return { profile: profile as Profile, record: record as TimeRecord | null, breaks }
-  })
-
-  // 今日の集計
-  const workingCount = staffList.filter(s => s.record && !s.record.clock_out).length
-  const finishedCount = staffList.filter(s => s.record?.status === 'finished').length
-  const notStartedCount = staffList.filter(s => !s.record).length
+  const stats = [
+    { label: 'スタッフ数', value: profilesCount ?? 0, icon: Users, color: 'text-amber-300' },
+    { label: 'アクティブタスク', value: tasksCount ?? 0, icon: CheckSquare, color: 'text-blue-300' },
+    { label: '開催予定大会', value: tournamentsCount ?? 0, icon: Trophy, color: 'text-purple-300' },
+    { label: '未読通知 (全体)', value: notificationsCount ?? 0, icon: Bell, color: 'text-red-300' },
+  ]
 
   return (
-    <div>
-      <AdminAutoRefresh intervalMs={30000} />
-      <h1 className="text-xl font-bold mb-6">
-        管理者ダッシュボード
-        <span className="text-sm font-normal text-muted-foreground ml-2">
-          {format(new Date(), 'M月d日（E）', { locale: ja })}
-        </span>
-      </h1>
+    <div className="mx-auto max-w-5xl space-y-6 p-6">
+      <section className="rounded-xl border border-amber-400/15 bg-[radial-gradient(circle_at_20%_0%,rgba(251,191,36,0.13),transparent_24rem),linear-gradient(135deg,rgba(15,23,42,0.92),rgba(3,7,18,0.88))] p-6">
+        <div className="text-sm font-medium text-amber-200/70">管理者専用</div>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-amber-100">管理者ダッシュボード</h1>
+        <p className="mt-2 text-muted-foreground">スタッフ・タスク・大会の統合管理</p>
+      </section>
 
-      {/* サマリー */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-green-600">{workingCount}</div>
-            <div className="text-xs text-muted-foreground mt-0.5">勤務中</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-gray-600">{notStartedCount}</div>
-            <div className="text-xs text-muted-foreground mt-0.5">未出勤</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-blue-600">{finishedCount}</div>
-            <div className="text-xs text-muted-foreground mt-0.5">退勤済み</div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {stats.map(({ label, value, icon: Icon, color }) => (
+          <Card key={label} className="border-amber-400/10 bg-card/95">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Icon className={`size-4 ${color}`} />
+                {label}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-2xl font-semibold text-amber-100">
+              {value}
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* スタッフ一覧 */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">本日の出勤状況</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {staffList.map(({ profile, record, breaks }) => {
-              const hasActiveBreak = breaks.some(b => !b.break_end)
-              const status = !record ? 'not_started'
-                : record.clock_out ? 'finished'
-                : hasActiveBreak ? 'on_break'
-                : 'working'
+      <div className="grid gap-4 md:grid-cols-2">
+        <Link href="/admin/users">
+          <Card className="border-amber-400/10 bg-card/95 hover:border-amber-400/30 hover:bg-muted/20 transition-colors cursor-pointer">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-amber-100">
+                <Users className="size-5 text-amber-300" />
+                スタッフ管理
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              スタッフの登録・編集・権限設定を行います
+            </CardContent>
+          </Card>
+        </Link>
 
-              const workedMinutes = (() => {
-                if (!record) return 0
-                const clockIn = new Date(record.clock_in)
-                const end = record.clock_out ? new Date(record.clock_out) : new Date()
-                let total = Math.floor((end.getTime() - clockIn.getTime()) / 60000)
-                for (const b of breaks) {
-                  if (!b.break_end) continue
-                  total -= Math.floor((new Date(b.break_end).getTime() - new Date(b.break_start).getTime()) / 60000)
-                }
-                return Math.max(0, total)
-              })()
-
-              const sb = STATUS_BADGE[status]
-
-              return (
-                <div key={profile.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <div className="font-medium text-sm">{profile.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {profile.position ?? 'スタッフ'}
-                        {record && ` • 出勤 ${format(new Date(record.clock_in), 'HH:mm')}`}
-                        {record?.clock_out && ` 〜 ${format(new Date(record.clock_out), 'HH:mm')}`}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {status !== 'not_started' && (
-                      <div className="text-right text-sm">
-                        <div className="text-xs text-muted-foreground">
-                          {formatMinutes(workedMinutes)}
-                        </div>
-                        {record?.total_wage && (
-                          <div className="text-xs text-muted-foreground">
-                            {formatWage(record.total_wage)}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <Badge variant={sb.variant} className="text-xs">
-                      {sb.label}
-                    </Badge>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
+        <Link href="/admin/shifts">
+          <Card className="border-amber-400/10 bg-card/95 hover:border-amber-400/30 hover:bg-muted/20 transition-colors cursor-pointer">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-amber-100">
+                <CheckSquare className="size-5 text-blue-300" />
+                シフト管理
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              シフトの作成・調整・承認を行います
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
     </div>
   )
 }
