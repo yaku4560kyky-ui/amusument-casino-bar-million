@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jsonError, requireAdmin, requireUser } from '@/lib/api/schedule'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET() {
   const { supabase, error } = await requireUser()
@@ -39,5 +40,31 @@ export async function POST(request: NextRequest) {
     .select()
     .single()
   if (queryError) return jsonError(queryError)
+
+  if (data?.assignee_id) {
+    try {
+      const notificationClient = createAdminClient()
+      await notificationClient.from('notifications').insert({
+        user_id: data.assignee_id,
+        type: 'task_assigned',
+        title: 'タスクが割り当てられました',
+        body: `「${data.title}」が担当に設定されました`,
+        link_url: '/tasks',
+        ref_table: 'operation_tasks',
+        ref_id: data.id,
+      })
+    } catch {
+      await supabase.from('notifications').insert({
+        user_id: data.assignee_id,
+        type: 'task_assigned',
+        title: 'タスクが割り当てられました',
+        body: `「${data.title}」が担当に設定されました`,
+        link_url: '/tasks',
+        ref_table: 'operation_tasks',
+        ref_id: data.id,
+      })
+    }
+  }
+
   return NextResponse.json({ task: data }, { status: 201 })
 }

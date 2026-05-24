@@ -2,20 +2,22 @@
 
 import { useState, type FormEvent } from 'react'
 import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-  getDay,
   addMonths,
-  subMonths,
+  eachDayOfInterval,
+  endOfMonth,
+  format,
+  getDay,
   isSameMonth,
   isToday,
   parseISO,
+  startOfMonth,
+  subMonths,
 } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Plus, Trash2, Calendar } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+
+import VoiceInput from '@/components/voice/VoiceInput'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,7 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import type { OperationEvent, EventType } from '@/types/schedule'
+import type { EventType, OperationEvent } from '@/types/schedule'
 
 interface CalendarTabProps {
   events: OperationEvent[]
@@ -78,18 +80,9 @@ function getEventsForDate(events: OperationEvent[], date: string) {
 }
 
 function getTimeRange(event: OperationEvent) {
-  if (event.start_time && event.end_time) {
-    return `${event.start_time} - ${event.end_time}`
-  }
-
-  if (event.start_time) {
-    return `${event.start_time} 開始`
-  }
-
-  if (event.end_time) {
-    return `${event.end_time} 終了`
-  }
-
+  if (event.start_time && event.end_time) return `${event.start_time} - ${event.end_time}`
+  if (event.start_time) return `${event.start_time} 開始`
+  if (event.end_time) return `${event.end_time} 終了`
   return ''
 }
 
@@ -116,20 +109,14 @@ export default function CalendarTab({
 
   function openAddDialog(date: string) {
     setSelectedDate(date)
-    setFormData({
-      ...EMPTY_FORM,
-      event_date: date,
-    })
+    setFormData({ ...EMPTY_FORM, event_date: date })
     setIsAddDialogOpen(true)
   }
 
   function handleDayClick(date: Date) {
     const dateKey = format(date, 'yyyy-MM-dd')
     setSelectedDate(dateKey)
-
-    if (isAdmin) {
-      openAddDialog(dateKey)
-    }
+    if (isAdmin) openAddDialog(dateKey)
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -159,6 +146,13 @@ export default function CalendarTab({
     } catch {
       toast.error('エラーが発生しました')
     }
+  }
+
+  function appendTranscript(text: string) {
+    setFormData(current => ({
+      ...current,
+      title: current.title ? `${current.title} ${text}` : text,
+    }))
   }
 
   return (
@@ -259,7 +253,7 @@ export default function CalendarTab({
                     ))}
                     {hiddenCount > 0 && (
                       <div className="text-[11px] leading-4 text-slate-400">
-                        +{hiddenCount} more
+                        +{hiddenCount} 件
                       </div>
                     )}
                   </div>
@@ -269,22 +263,12 @@ export default function CalendarTab({
           </div>
 
           <div className="flex flex-wrap gap-4 text-xs text-slate-300">
-            <div className="flex items-center gap-2">
-              <span className="size-2.5 rounded-full bg-amber-500" />
-              通常営業
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="size-2.5 rounded-full bg-amber-600" />
-              特別イベント
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="size-2.5 rounded-full bg-purple-500" />
-              EXCEED大会
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="size-2.5 rounded-full bg-red-500" />
-              臨時休業
-            </div>
+            {Object.entries(EVENT_LABELS).map(([type, label]) => (
+              <div key={type} className="flex items-center gap-2">
+                <span className={`size-2.5 rounded-full ${type === 'regular' ? 'bg-amber-500' : type === 'special' ? 'bg-amber-600' : type === 'exceed' ? 'bg-purple-500' : 'bg-red-500'}`} />
+                {label}
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -292,7 +276,7 @@ export default function CalendarTab({
       <Card className="mt-6 w-full border-amber-400/10 bg-[oklch(0.18_0.02_260)] text-slate-100 lg:mt-0 lg:w-80">
         <CardHeader className="border-b border-amber-400/10">
           <CardTitle className="text-base text-amber-100">
-            {format(parseISO(activeDate), 'M月d日（E）', { locale: ja })}
+            {format(parseISO(activeDate), 'M月d日 EEEE', { locale: ja })}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 p-4">
@@ -361,13 +345,16 @@ export default function CalendarTab({
 
               <div className="space-y-1.5">
                 <Label htmlFor="title" className="text-slate-200">タイトル</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={event => setFormData(prev => ({ ...prev, title: event.target.value }))}
-                  className="border-amber-400/20 bg-[oklch(0.12_0.02_260)] text-slate-100"
-                  required
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={event => setFormData(prev => ({ ...prev, title: event.target.value }))}
+                    className="border-amber-400/20 bg-[oklch(0.12_0.02_260)] text-slate-100"
+                    required
+                  />
+                  <VoiceInput onTranscript={appendTranscript} />
+                </div>
               </div>
 
               <div className="space-y-1.5">
@@ -380,10 +367,11 @@ export default function CalendarTab({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="border border-border bg-[oklch(0.18_0.02_260)] text-slate-100">
-                    <SelectItem value="regular">通常営業</SelectItem>
-                    <SelectItem value="special">特別イベント</SelectItem>
-                    <SelectItem value="closed">臨時休業</SelectItem>
-                    <SelectItem value="exceed">EXCEED大会</SelectItem>
+                    {Object.entries(EVENT_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
