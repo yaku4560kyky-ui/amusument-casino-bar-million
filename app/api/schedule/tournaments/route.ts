@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       venue_notes: body.venue_notes || null,
       max_participants: Number(body.max_participants ?? 20),
       notes: body.notes || null,
+      image_urls: Array.isArray(body.image_urls) ? body.image_urls : [],
       status: body.status || 'planning',
       created_by: user.id,
     })

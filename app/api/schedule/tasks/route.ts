@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       assignee_id: body.assignee_id || null,
       due_date: body.due_date || null,
       notes: body.notes || null,
+      image_urls: Array.isArray(body.image_urls) ? body.image_urls : [],
       kanban_status: body.kanban_status || 'todo',
       created_by: user.id,
     })

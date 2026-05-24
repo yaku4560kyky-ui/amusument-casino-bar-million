@@ -45,6 +45,7 @@ type AddTournamentPayload = {
   max_participants: number
   venue_notes: string | null
   notes: string | null
+  image_urls: string[]
   withTemplate: boolean
 }
 

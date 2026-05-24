@@ -19,6 +19,8 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 
+import ImageGallery from "@/components/image/ImageGallery"
+import ImageUpload from "@/components/image/ImageUpload"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -91,6 +93,7 @@ type AddTournamentPayload = {
   max_participants: number
   venue_notes: string | null
   notes: string | null
+  image_urls: string[]
   withTemplate: boolean
 }
 
@@ -120,6 +123,7 @@ type AddFormData = {
   max_participants: string
   venue_notes: string
   notes: string
+  image_urls: string[]
   withTemplate: boolean
 }
 
@@ -233,8 +237,10 @@ function ExceedTab({
     max_participants: "20",
     venue_notes: "",
     notes: "",
+    image_urls: [],
     withTemplate: true,
   })
+  const [addDraftRefId, setAddDraftRefId] = useState(() => crypto.randomUUID())
 
   const sortedTournaments = useMemo(() => {
     return [...tournaments].sort((a, b) => {
@@ -279,8 +285,10 @@ function ExceedTab({
       max_participants: "20",
       venue_notes: "",
       notes: "",
+      image_urls: [],
       withTemplate: true,
     })
+    setAddDraftRefId(crypto.randomUUID())
   }
 
   const handleSubmitAddTournament = async (event: FormEvent<HTMLFormElement>) => {
@@ -305,6 +313,7 @@ function ExceedTab({
           : 20,
       venue_notes: addFormData.venue_notes.trim() || null,
       notes: addFormData.notes.trim() || null,
+      image_urls: addFormData.image_urls,
       withTemplate: addFormData.withTemplate,
     })
 
@@ -778,6 +787,29 @@ function ExceedTab({
                       setAddFormData((current) => ({
                         ...current,
                         notes: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label>画像</Label>
+                  <ImageGallery
+                    urls={addFormData.image_urls}
+                    onDelete={(url) =>
+                      setAddFormData((current) => ({
+                        ...current,
+                        image_urls: current.image_urls.filter((currentUrl) => currentUrl !== url),
+                      }))
+                    }
+                  />
+                  <ImageUpload
+                    refTable="exceed_tournaments"
+                    refId={addDraftRefId}
+                    onUploaded={(url) =>
+                      setAddFormData((current) => ({
+                        ...current,
+                        image_urls: [...current.image_urls, url],
                       }))
                     }
                   />

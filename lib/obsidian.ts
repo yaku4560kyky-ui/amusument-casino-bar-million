@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { unstable_noStore as noStore } from 'next/cache'
-import { readdir, readFile, stat } from 'fs/promises'
+import { readdir, readFile, stat, writeFile } from 'fs/promises'
 import path from 'path'
 
 function getVaultRoot() {
@@ -84,4 +84,20 @@ export async function vaultFileExists(relativePath: string): Promise<boolean> {
 
     throw error
   }
+}
+
+export async function writeVaultMarkdown(relativePath: string, content: string): Promise<void> {
+  noStore()
+  const filePath = resolveVaultPath(relativePath)
+  await writeFile(filePath, content, 'utf8')
+}
+
+export async function listVaultDirectory(relativeDir: string): Promise<string[]> {
+  noStore()
+  const dirPath = resolveVaultPath(relativeDir)
+  const entries = await readdir(dirPath, { withFileTypes: true })
+
+  return entries
+    .filter(entry => entry.isFile() && entry.name.endsWith('.md'))
+    .map(entry => entry.name)
 }

@@ -4,6 +4,8 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
+import ImageGallery from '@/components/image/ImageGallery'
+import ImageUpload from '@/components/image/ImageUpload'
 import VoiceInput from '@/components/voice/VoiceInput'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -28,6 +30,7 @@ type TaskForm = {
   due_date: string
   recurrence_type: RecurrenceType
   notes: string
+  image_urls: string[]
 }
 
 interface TaskDialogProps {
@@ -46,6 +49,7 @@ const EMPTY_FORM: TaskForm = {
   due_date: '',
   recurrence_type: 'none',
   notes: '',
+  image_urls: [],
 }
 
 export default function TaskDialog({
@@ -58,9 +62,11 @@ export default function TaskDialog({
   const router = useRouter()
   const [form, setForm] = useState<TaskForm>(EMPTY_FORM)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [draftRefId, setDraftRefId] = useState('')
 
   useEffect(() => {
     if (!open) return
+    setDraftRefId(crypto.randomUUID())
     setForm(
       task
         ? {
@@ -71,6 +77,7 @@ export default function TaskDialog({
             due_date: task.due_date ?? '',
             recurrence_type: task.recurrence_type,
             notes: task.notes ?? '',
+            image_urls: task.image_urls ?? [],
           }
         : EMPTY_FORM
     )
@@ -88,6 +95,7 @@ export default function TaskDialog({
       due_date: form.due_date || null,
       recurrence_type: form.recurrence_type,
       notes: form.notes || null,
+      image_urls: form.image_urls,
     }
 
     try {
@@ -115,6 +123,8 @@ export default function TaskDialog({
       title: current.title ? `${current.title} ${text}` : text,
     }))
   }
+
+  const uploadRefId = task?.id ?? draftRefId
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -240,6 +250,30 @@ export default function TaskDialog({
               value={form.notes}
               onChange={event => setForm(current => ({ ...current, notes: event.target.value }))}
               className="min-h-24 border-amber-400/20 bg-[oklch(0.12_0.02_260)] text-slate-100"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <Label>画像</Label>
+            <ImageGallery
+              urls={form.image_urls}
+              onDelete={url =>
+                setForm(current => ({
+                  ...current,
+                  image_urls: current.image_urls.filter(currentUrl => currentUrl !== url),
+                }))
+              }
+            />
+            <ImageUpload
+              refTable="operation_tasks"
+              refId={uploadRefId}
+              disabled={!uploadRefId || isSubmitting}
+              onUploaded={url =>
+                setForm(current => ({
+                  ...current,
+                  image_urls: [...current.image_urls, url],
+                }))
+              }
             />
           </div>
 
